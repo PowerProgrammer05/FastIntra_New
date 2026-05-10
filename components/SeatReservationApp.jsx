@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import SeatBlockGrid from './SeatBlockGrid';
 import { readJsonResponse } from '../lib/api-client';
 import { groupSeatsByRow, groupSeatsByFloor, groupSeatsByBlocks } from '../lib/seats';
-import { STUDY_ROOM_SLOTS } from '../lib/slots';
+import { getDefaultStudyRoomSlot, getStudyRoomSlots } from '../lib/slots';
 
 const STATUS_COPY = {
   available: '예약 가능',
@@ -25,11 +25,12 @@ function formatTime(isoTime) {
 
 export default function SeatReservationApp() {
   const router = useRouter();
+  const studyRoomSlots = useMemo(() => getStudyRoomSlots(), []);
   const [memId, setMemId] = useState('');
   const [isMaster, setIsMaster] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [deviceRegistered, setDeviceRegistered] = useState(false);
-  const [stIdxFull, setStIdxFull] = useState(STUDY_ROOM_SLOTS[0].value);
+  const [stIdxFull, setStIdxFull] = useState(() => getDefaultStudyRoomSlot());
   const [seatSearch, setSeatSearch] = useState('');
   const [selectedFloor, setSelectedFloor] = useState('1층');
   const [selectedSeatIdx, setSelectedSeatIdx] = useState(null);
@@ -355,7 +356,7 @@ export default function SeatReservationApp() {
           <div className="search-row">
             <h2 className="section-title">타임 선택</h2>
             <div className="slot-list">
-              {STUDY_ROOM_SLOTS.map((slot) => (
+              {studyRoomSlots.map((slot) => (
                 <label key={slot.value} className={`slot-item ${stIdxFull === slot.value ? 'selected' : ''}`}>
                   <input
                     type="radio"
@@ -364,7 +365,9 @@ export default function SeatReservationApp() {
                     checked={stIdxFull === slot.value}
                     onChange={(event) => setStIdxFull(event.target.value)}
                   />
-                  <span>\n                    <strong>{slot.label}</strong>\n                  </span>
+                  <span>
+                    <strong>{slot.label}</strong>
+                  </span>
                 </label>
               ))}
             </div>
@@ -452,7 +455,7 @@ export default function SeatReservationApp() {
             <div>
               <h2>도서관 좌석 배치</h2>
               <p style={{ margin: '6px 0 0', color: 'var(--muted)' }}>
-                선택한 타임({STUDY_ROOM_SLOTS.find((slot) => slot.value === stIdxFull)?.label})에 따라 좌석 상태가 분리됩니다.
+                선택한 타임({studyRoomSlots.find((slot) => slot.value === stIdxFull)?.label})에 따라 좌석 상태가 분리됩니다.
               </p>
             </div>
             <div className="legend">
