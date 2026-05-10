@@ -1,0 +1,9 @@
+node_modules
+.next
+dist
+out
+data/reservations.json
+.DS_Store
+
+#DB
+lib_seats.json

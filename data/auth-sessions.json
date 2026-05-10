@@ -1,0 +1,59 @@
+{
+  "27e3a251-2456-4583-8f4d-dc79b8f745a2": {
+    "memId": "VanHalen",
+    "memPwd": "",
+    "remoteCookieHeader": "HANA_MYSQL_USER_TOMCAT_JSESSIONID=9AD68DD9E8F609AEC9E7F31EF273A1AE",
+    "loginResponse": {
+      "failCnt": 0,
+      "AUTH_TOKEN": {
+        "ACCESS_TOKEN": "eyJyZWdEYXRlIjoxNzc4MzkxMDM2MTUwLCJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMDAzNTEiLCJyb2xlcyI6IjMyNzY4IiwiaWF0IjoxNzc4MzkxMDM2LCJleHAiOjE3Nzg5OTU4MzZ9.G7ofn0pj6WALBgQml5Jg9yWe2ZLQRGQE1RqcKp1vNTo",
+        "REFRESH_TOKEN": "eyJyZWdEYXRlIjoxNzc4MzkxMDM2MTUwLCJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMDAzNTEiLCJyb2xlcyI6IjMyNzY4IiwiaWF0IjoxNzc4MzkxMDM2LCJleHAiOjE3ODA5ODMwMzZ9.3eGxiuuYDGHgwotRM5cxZBdKzohy1lu16VyM66Kj6o4"
+      },
+      "responseMessage": "LOGIN_SUCCESS",
+      "redirect_url": "",
+      "statusCode": 200
+    },
+    "authToken": "eyJyZWdEYXRlIjoxNzc4MzkxMDM2MTUwLCJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMDAzNTEiLCJyb2xlcyI6IjMyNzY4IiwiaWF0IjoxNzc4MzkxMDM2LCJleHAiOjE3Nzg5OTU4MzZ9.G7ofn0pj6WALBgQml5Jg9yWe2ZLQRGQE1RqcKp1vNTo",
+    "status": "authenticated",
+    "createdAt": "2026-05-10T05:30:36.095Z",
+    "updatedAt": "2026-05-10T05:30:36.095Z"
+  },
+  "02257ca6-2970-4734-8f0b-fa2b8e1d08d6": {
+    "memId": "VanHalen",
+    "memPwd": "",
+    "remoteCookieHeader": "HANA_MYSQL_USER_TOMCAT_JSESSIONID=88656BD6068EE334D1E9B27254A84641",
+    "loginResponse": {
+      "failCnt": 0,
+      "AUTH_TOKEN": {
+        "ACCESS_TOKEN": "eyJyZWdEYXRlIjoxNzc4MzkxODU4MTc4LCJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMDAzNTEiLCJyb2xlcyI6IjMyNzY4IiwiaWF0IjoxNzc4MzkxODU4LCJleHAiOjE3Nzg5OTY2NTh9.LJH_Su3Igp3sXfaSrn_tynIUDLwW-TeVtNGmH01Zib4",
+        "REFRESH_TOKEN": "eyJyZWdEYXRlIjoxNzc4MzkxODU4MTc4LCJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMDAzNTEiLCJyb2xlcyI6IjMyNzY4IiwiaWF0IjoxNzc4MzkxODU4LCJleHAiOjE3ODA5ODM4NTh9._nPpKw1MLBp1LzfmgikHKB3WzpUPvtdCSsD-MDDCfvg"
+      },
+      "responseMessage": "LOGIN_SUCCESS",
+      "redirect_url": "",
+      "statusCode": 200
+    },
+    "authToken": "eyJyZWdEYXRlIjoxNzc4MzkxODU4MTc4LCJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMDAzNTEiLCJyb2xlcyI6IjMyNzY4IiwiaWF0IjoxNzc4MzkxODU4LCJleHAiOjE3Nzg5OTY2NTh9.LJH_Su3Igp3sXfaSrn_tynIUDLwW-TeVtNGmH01Zib4",
+    "status": "authenticated",
+    "createdAt": "2026-05-10T05:44:18.216Z",
+    "updatedAt": "2026-05-10T05:44:18.216Z"
+  },
+  "b3973df4-031a-4f69-84e1-a26997d9091f": {
+    "memId": "VanHalen",
+    "memPwd": "",
+    "remoteCookieHeader": "HANA_MYSQL_USER_TOMCAT_JSESSIONID=973396425729F23034F2CFCC125D1A57",
+    "loginResponse": {
+      "failCnt": 1,
+      "AUTH_TOKEN": {
+        "ACCESS_TOKEN": "eyJyZWdEYXRlIjoxNzc4Mzk0Njg5Mjk2LCJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMDAzNTEiLCJyb2xlcyI6IjMyNzY4IiwiaWF0IjoxNzc4Mzk0Njg5LCJleHAiOjE3Nzg5OTk0ODl9.cSCylN5EOFSsElZkEyb2cLNY2nm3Bq0h3iuL4Dj4BoA",
+        "REFRESH_TOKEN": "eyJyZWdEYXRlIjoxNzc4Mzk0Njg5Mjk2LCJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMDAzNTEiLCJyb2xlcyI6IjMyNzY4IiwiaWF0IjoxNzc4Mzk0Njg5LCJleHAiOjE3ODA5ODY2ODl9.vff5c6sRF9KT0KuQfMxuMAi1jGmw9LkdWsNuSjZ7g0U"
+      },
+      "responseMessage": "LOGIN_SUCCESS",
+      "redirect_url": "",
+      "statusCode": 200
+    },
+    "authToken": "eyJyZWdEYXRlIjoxNzc4Mzk0Njg5Mjk2LCJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMDAzNTEiLCJyb2xlcyI6IjMyNzY4IiwiaWF0IjoxNzc4Mzk0Njg5LCJleHAiOjE3Nzg5OTk0ODl9.cSCylN5EOFSsElZkEyb2cLNY2nm3Bq0h3iuL4Dj4BoA",
+    "status": "authenticated",
+    "createdAt": "2026-05-10T06:31:29.390Z",
+    "updatedAt": "2026-05-10T06:31:29.390Z"
+  }
+}
