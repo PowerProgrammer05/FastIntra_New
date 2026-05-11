@@ -7,7 +7,7 @@ import {
   getSetCookieLines,
   mergeCookieHeader
 } from '../../../../lib/hh-client';
-import { COOKIE_NAME, createSession } from '../../../../lib/session-store';
+import { COOKIE_NAME, createSession, getSessionCookieValue } from '../../../../lib/session-store';
 
 async function primeRemoteCookies() {
   try {
@@ -49,7 +49,7 @@ export async function POST(request) {
     const responseData = json || { result: 'fail', resMsg: '로그인 응답을 확인할 수 없습니다.' };
 
     if (String(responseData.responseMessage || '') === 'LOGIN_SUCCESS') {
-      const { sessionId } = await createSession({
+      const { sessionId, session } = await createSession({
         memId,
         memPwd: '',
         remoteCookieHeader,
@@ -68,7 +68,7 @@ export async function POST(request) {
         }
       });
 
-      nextResponse.cookies.set(COOKIE_NAME, sessionId, getSessionCookieOptions());
+      nextResponse.cookies.set(COOKIE_NAME, getSessionCookieValue(sessionId, session), getSessionCookieOptions());
       return nextResponse;
     }
 
