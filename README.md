@@ -15,7 +15,7 @@ npm run dev
 ```
 
 ## 사이트
-
+https://server-fastintra.vercel.app/ 
 
 ## 주요 변경점 & 안내
 - 이전 인트라넷은 Frontend에서 시간과 username 등을 확인해 남의 좌석 빼앗기도 가능했지만, 이제는 확인 결과를 request로 보내주어 서버 밖에서 기예를 부리기 힘들어졌습니다.
