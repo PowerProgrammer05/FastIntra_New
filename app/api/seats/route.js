@@ -106,6 +106,14 @@ export async function GET(request) {
       c_place_cd: item.c_place_cd,
       c_place_cd_name: item.c_place_cd_name,
       requesterName: item.sre_mem_name || item.memName || item.requesterName || '',
+      stIdxFull,
+      remote: {
+        srt_cont: item.srt_cont,
+        holidayYn: item.holidayYn,
+        sre_mem_name: item.sre_mem_name,
+        memName: item.memName,
+        requesterName: item.requesterName
+      },
       status: seatStatus.status,
       clickable: seatStatus.clickable,
       showCancel: seatStatus.showCancel,

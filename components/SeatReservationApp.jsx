@@ -23,9 +23,25 @@ function formatTime(isoTime) {
   }).format(new Date(isoTime));
 }
 
+function formatDetailValue(value) {
+  if (value === undefined || value === null || value === '') return '-';
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  return String(value);
+}
+
+function SeatDetailItem({ label, value }) {
+  return (
+    <div className="detail-item">
+      <strong>{label}</strong>
+      <span>{formatDetailValue(value)}</span>
+    </div>
+  );
+}
+
 export default function SeatReservationApp() {
   const router = useRouter();
   const studyRoomSlots = useMemo(() => getStudyRoomSlots(), []);
+  const [activeService, setActiveService] = useState('library');
   const [memId, setMemId] = useState('');
   const [isMaster, setIsMaster] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -41,6 +57,14 @@ export default function SeatReservationApp() {
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('info');
   const [selectedSeatDetail, setSelectedSeatDetail] = useState(null);
+  const [classroomBuildings, setClassroomBuildings] = useState([]);
+  const [selectedBuilding, setSelectedBuilding] = useState('');
+  const [classroomRooms, setClassroomRooms] = useState([]);
+  const [classroomSearch, setClassroomSearch] = useState('');
+  const [selectedClassroom, setSelectedClassroom] = useState(null);
+  const [classroomInfo, setClassroomInfo] = useState(null);
+  const [classroomRequest, setClassroomRequest] = useState(null);
+  const [classroomLoading, setClassroomLoading] = useState(false);
 
   const stats = useMemo(() => {
     const total = seats.length;
@@ -66,6 +90,26 @@ export default function SeatReservationApp() {
     const selected = floorSeats[selectedFloor] || [];
     return groupSeatsByBlocks(selected);
   }, [floorSeats, selectedFloor]);
+
+  const filteredClassroomRooms = useMemo(() => {
+    const query = classroomSearch.trim().toLowerCase();
+    if (!query) return classroomRooms;
+
+    return classroomRooms.filter((room) => {
+      const haystack = [
+        room.roomName,
+        room.roomCode,
+        room.buildingName,
+        room.stName,
+        room.approvalName,
+        room.teacherApprovalName
+      ].join(' ').toLowerCase();
+
+      return haystack.includes(query);
+    });
+  }, [classroomRooms, classroomSearch]);
+
+  const selectedSlotLabel = studyRoomSlots.find((slot) => slot.value === stIdxFull)?.label || stIdxFull;
 
   async function loadSeats() {
     setLoading(true);
@@ -99,6 +143,195 @@ export default function SeatReservationApp() {
     }
   }
 
+  async function loadClassroomBuildings() {
+    setClassroomLoading(true);
+
+    try {
+      const response = await fetch(`/api/classrooms/buildings?stIdxFull=${encodeURIComponent(stIdxFull)}`, {
+        credentials: 'same-origin'
+      });
+      const data = await readJsonResponse(response);
+
+      if (!response.ok || data.result !== 'success') {
+        if (response.status === 401) {
+          router.replace('/login');
+          return;
+        }
+
+        throw new Error(data.resMsg || '교과교실 동 목록을 가져오지 못했습니다.');
+      }
+
+      const nextBuildings = data.buildings || [];
+      setClassroomBuildings(nextBuildings);
+      setSelectedBuilding((current) => {
+        if (current && nextBuildings.some((building) => building.slgNum === current)) {
+          return current;
+        }
+
+        return nextBuildings[0]?.slgNum || '';
+      });
+      setMessage('교과교실 동 목록을 불러왔습니다.');
+      setMessageType('info');
+    } catch (error) {
+      setMessage(error.message || '교과교실 동 목록을 가져오지 못했습니다.');
+      setMessageType('error');
+    } finally {
+      setClassroomLoading(false);
+    }
+  }
+
+  async function loadClassroomRooms(slgNum = selectedBuilding) {
+    if (!slgNum) {
+      setClassroomRooms([]);
+      setSelectedClassroom(null);
+      setClassroomInfo(null);
+      setClassroomRequest(null);
+      return;
+    }
+
+    setClassroomLoading(true);
+
+    try {
+      const query = new URLSearchParams({ slgNum, stIdxFull }).toString();
+      const response = await fetch(`/api/classrooms/rooms?${query}`, { credentials: 'same-origin' });
+      const data = await readJsonResponse(response);
+
+      if (!response.ok || data.result !== 'success') {
+        if (response.status === 401) {
+          router.replace('/login');
+          return;
+        }
+
+        throw new Error(data.resMsg || '교과교실 목록을 가져오지 못했습니다.');
+      }
+
+      setClassroomRooms(data.rooms || []);
+      setSelectedClassroom(null);
+      setClassroomInfo(null);
+      setClassroomRequest(null);
+      setMessage(data.rooms?.length ? '교과교실 목록을 불러왔습니다.' : '선택한 타임에 표시할 교과교실이 없습니다.');
+      setMessageType(data.rooms?.length ? 'info' : 'error');
+    } catch (error) {
+      setMessage(error.message || '교과교실 목록을 가져오지 못했습니다.');
+      setMessageType('error');
+    } finally {
+      setClassroomLoading(false);
+    }
+  }
+
+  async function loadClassroomInfo(room) {
+    if (!room?.crIdx) return;
+
+    setSelectedClassroom(room);
+    setClassroomInfo(null);
+    setClassroomRequest(room.crtIdx ? { crt_idx: room.crtIdx, ...room.remote } : null);
+
+    try {
+      const response = await fetch(`/api/classrooms/info?crIdx=${encodeURIComponent(room.crIdx)}`, {
+        credentials: 'same-origin'
+      });
+      const data = await readJsonResponse(response);
+
+      if (!response.ok || data.result !== 'success') {
+        throw new Error(data.resMsg || '교과교실 상세 정보를 가져오지 못했습니다.');
+      }
+
+      setClassroomInfo(data);
+    } catch (error) {
+      setMessage(error.message || '교과교실 상세 정보를 가져오지 못했습니다.');
+      setMessageType('error');
+    }
+  }
+
+  async function handleClassroomApply(room = selectedClassroom) {
+    if (!room) {
+      setMessage('신청할 교과교실을 선택해 주세요.');
+      setMessageType('error');
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      const response = await fetch('/api/classrooms/apply', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          room: {
+            slgNum: room.slgNum,
+            crIdx: room.crIdx,
+            stIdxFull,
+            crtCont: ''
+          }
+        })
+      });
+      const data = await readJsonResponse(response);
+
+      if (!response.ok || data.result !== 'success') {
+        throw new Error(data.resMsg || data.hMsg || data.retMsg || '교과교실 신청 중 오류가 발생했습니다.');
+      }
+
+      const request = data.classRoomReqVo || data.item || null;
+      const requestCrtIdx = Number(request?.crt_idx || request?.crtIdx || 0);
+      if (requestCrtIdx) {
+        setClassroomRequest(request);
+        setSelectedClassroom({ ...room, crtIdx: requestCrtIdx });
+      }
+
+      setMessage(`${room.roomName || room.roomCode} 교과교실 신청이 완료되었습니다.`);
+      setMessageType('success');
+    } catch (error) {
+      setMessage(error.message || '교과교실 신청 중 오류가 발생했습니다.');
+      setMessageType('error');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleClassroomCancel(targetRequest = classroomRequest, targetRoom = selectedClassroom) {
+    const crtIdx = Number(targetRequest?.crt_idx || targetRequest?.crtIdx || targetRoom?.crtIdx || 0);
+
+    if (!crtIdx) {
+      setMessage('취소할 교과교실 신청 정보(crt_idx)가 없습니다.');
+      setMessageType('error');
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      const response = await fetch('/api/classrooms/cancel', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({ crtIdx })
+      });
+      const data = await readJsonResponse(response);
+
+      if (!response.ok || data.result !== 'success') {
+        throw new Error(data.resMsg || data.hMsg || data.retMsg || '교과교실 신청 취소 중 오류가 발생했습니다.');
+      }
+
+      setMessage('교과교실 신청을 취소했습니다.');
+      setMessageType('success');
+      setClassroomRequest(null);
+      setSelectedClassroom((current) => (current ? { ...current, crtIdx: 0 } : current));
+      if (selectedBuilding) {
+        await loadClassroomRooms(selectedBuilding);
+      }
+    } catch (error) {
+      setMessage(error.message || '교과교실 신청 취소 중 오류가 발생했습니다.');
+      setMessageType('error');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   useEffect(() => {
     async function bootstrap() {
       try {
@@ -114,7 +347,6 @@ export default function SeatReservationApp() {
         setMemId(data.session.memId || '');
         setIsMaster(data.isMaster || false);
         setDeviceRegistered(false);
-        await loadSeats();
       } catch {
         router.replace('/login');
       }
@@ -125,9 +357,23 @@ export default function SeatReservationApp() {
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    loadSeats();
+    if (activeService === 'library') {
+      loadSeats();
+      return;
+    }
+
+    loadClassroomBuildings();
+    if (selectedBuilding) {
+      loadClassroomRooms(selectedBuilding);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stIdxFull]);
+  }, [activeService, isAuthenticated, stIdxFull]);
+
+  useEffect(() => {
+    if (!isAuthenticated || activeService !== 'classroom') return;
+    loadClassroomRooms(selectedBuilding);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBuilding]);
 
   async function handleReserve(seat) {
     setSubmitting(true);
@@ -252,6 +498,16 @@ export default function SeatReservationApp() {
   }
 
   function applyProfile() {
+    if (activeService === 'classroom') {
+      loadClassroomBuildings();
+      if (selectedBuilding) {
+        loadClassroomRooms(selectedBuilding);
+      }
+      setMessage('교과교실 정보를 다시 불러왔습니다.');
+      setMessageType('info');
+      return;
+    }
+
     loadSeats();
     setMessage('좌석 정보를 다시 불러왔습니다.');
     setMessageType('info');
@@ -303,29 +559,52 @@ export default function SeatReservationApp() {
   return (
     <main className={`page-shell${isMaster ? ' master-window' : ''}`}>
       <section className="hero">
-        <div className="eyebrow">Library Seat Reservation</div>
+        <div className="eyebrow">Fastintra Reservation</div>
         <h1>New FASTINTRA</h1>
         <p>
-          도서관 예약의 자유를 위한 새로운 FASTINTRA by POWERPROGRAMMER
+          도서관 좌석과 교과교실 신청을 한 화면에서 처리합니다.
         </p>
 
         <div className="hero-metrics">
-          <div className="metric">
-            <span>전체 좌석</span>
-            <strong>{stats.total}</strong>
-          </div>
-          <div className="metric">
-            <span>예약 가능</span>
-            <strong>{stats.available}</strong>
-          </div>
-          <div className="metric">
-            <span>예약 중</span>
-            <strong>{stats.reserved}</strong>
-          </div>
-          <div className="metric">
-            <span>내 예약</span>
-            <strong>{stats.mine}</strong>
-          </div>
+          {activeService === 'library' ? (
+            <>
+              <div className="metric">
+                <span>전체 좌석</span>
+                <strong>{stats.total}</strong>
+              </div>
+              <div className="metric">
+                <span>예약 가능</span>
+                <strong>{stats.available}</strong>
+              </div>
+              <div className="metric">
+                <span>예약 중</span>
+                <strong>{stats.reserved}</strong>
+              </div>
+              <div className="metric">
+                <span>내 예약</span>
+                <strong>{stats.mine}</strong>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="metric">
+                <span>동</span>
+                <strong>{classroomBuildings.length}</strong>
+              </div>
+              <div className="metric">
+                <span>교실</span>
+                <strong>{classroomRooms.length}</strong>
+              </div>
+              <div className="metric">
+                <span>선택 타임</span>
+                <strong>{selectedSlotLabel}</strong>
+              </div>
+              <div className="metric">
+                <span>선택 교실</span>
+                <strong>{selectedClassroom?.roomName || '-'}</strong>
+              </div>
+            </>
+          )}
         </div>
       </section>
 
@@ -354,6 +633,26 @@ export default function SeatReservationApp() {
           </div>
 
           <div className="search-row">
+            <h2 className="section-title">신청 메뉴</h2>
+            <div className="mode-tabs">
+              <button
+                type="button"
+                className={`mode-tab ${activeService === 'library' ? 'active' : ''}`}
+                onClick={() => setActiveService('library')}
+              >
+                도서관 신청
+              </button>
+              <button
+                type="button"
+                className={`mode-tab ${activeService === 'classroom' ? 'active' : ''}`}
+                onClick={() => setActiveService('classroom')}
+              >
+                교과교실 신청
+              </button>
+            </div>
+          </div>
+
+          <div className="search-row">
             <h2 className="section-title">타임 선택</h2>
             <div className="slot-list">
               {studyRoomSlots.map((slot) => (
@@ -373,109 +672,256 @@ export default function SeatReservationApp() {
             </div>
           </div>
 
-          <div className="search-row">
-            <h2 className="section-title">구역 선택</h2>
-            <div className="floor-tabs">
-              {['1층', '2층', '토의실A', '토의실B'].map((floor) => (
-                <button
-                  key={floor}
-                  type="button"
-                  className={`floor-tab ${selectedFloor === floor ? 'active' : ''}`}
-                  onClick={() => setSelectedFloor(floor)}
-                >
-                  {floor}
-                  <small>({(floorSeats[floor] || []).length})</small>
+          {activeService === 'library' ? (
+            <>
+              <div className="search-row">
+                <h2 className="section-title">구역 선택</h2>
+                <div className="floor-tabs">
+                  {['1층', '2층', '토의실A', '토의실B'].map((floor) => (
+                    <button
+                      key={floor}
+                      type="button"
+                      className={`floor-tab ${selectedFloor === floor ? 'active' : ''}`}
+                      onClick={() => setSelectedFloor(floor)}
+                    >
+                      {floor}
+                      <small>({(floorSeats[floor] || []).length})</small>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="search-row">
+                <h2 className="section-title">좌석 검색</h2>
+                <div className="inline-actions">
+                  <input
+                    value={seatSearch}
+                    onChange={(event) => setSeatSearch(event.target.value)}
+                    placeholder="2-81, 2-85,.. 검색"
+                  />
+                  <button type="button" className="button button-muted" onClick={() => setSeatSearch('')}>
+                    초기화
+                  </button>
+                </div>
+              </div>
+
+              <div className="summary-card">
+                <small>현재 선택 / 내 예약</small>
+                <strong>{selectedSeat ? selectedSeat.seatNo : '-'}</strong>
+                <div className="summary-row">
+                  <span>상태</span>
+                  <span>{selectedSeat ? STATUS_COPY[selectedSeat.status] || '확인 필요' : '선택 없음'}</span>
+                </div>
+                <div className="summary-row">
+                  <span>좌석 번호</span>
+                  <span>{selectedSeat ? `${selectedSeat.srt_num}` : '-'}</span>
+                </div>
+                <div className="summary-row">
+                  <span>예약 시간</span>
+                  <span>{myReservation ? formatTime(myReservation.createdAt) : '-'}</span>
+                </div>
+              </div>
+
+              <div className="chip-row">
+                <span className="chip"><span className="chip-dot" style={{ background: '#15803d' }} /> 예약 가능</span>
+                <span className="chip"><span className="chip-dot" style={{ background: '#d97706' }} /> 예약됨</span>
+                <span className="chip"><span className="chip-dot" style={{ background: '#2563eb' }} /> 내 예약</span>
+              </div>
+
+              <div className="status-box">
+                <h3>기기 등록</h3>
+                <p style={{ marginBottom: 12 }}>
+                  도서관 신청은 마지막으로 등록한 기기 한 곳에서만 가능하도록 동작합니다.
+                </p>
+                <button type="button" className="button button-primary" onClick={handleDeviceRegister}>
+                  {deviceRegistered ? '기기 재등록' : '기기 등록'}
                 </button>
-              ))}
-            </div>
-          </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="search-row">
+                <h2 className="section-title">동 선택</h2>
+                <div className="floor-tabs">
+                  {classroomBuildings.map((building) => (
+                    <button
+                      key={building.slgNum}
+                      type="button"
+                      className={`floor-tab ${selectedBuilding === building.slgNum ? 'active' : ''}`}
+                      onClick={() => setSelectedBuilding(building.slgNum)}
+                    >
+                      {building.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-          <div className="search-row">
-            <h2 className="section-title">좌석 검색</h2>
-            <div className="inline-actions">
-              <input
-                value={seatSearch}
-                onChange={(event) => setSeatSearch(event.target.value)}
-                placeholder="2-81, 2-85,.. 검색"
-              />
-              <button type="button" className="button button-muted" onClick={() => setSeatSearch('')}>
-                초기화
-              </button>
-            </div>
-          </div>
+              <div className="search-row">
+                <h2 className="section-title">교실 검색</h2>
+                <div className="inline-actions">
+                  <input
+                    value={classroomSearch}
+                    onChange={(event) => setClassroomSearch(event.target.value)}
+                    placeholder="A301, 자동승인,.. 검색"
+                  />
+                  <button type="button" className="button button-muted" onClick={() => setClassroomSearch('')}>
+                    초기화
+                  </button>
+                </div>
+              </div>
 
-          <div className="summary-card">
-            <small>현재 선택 / 내 예약</small>
-            <strong>{selectedSeat ? selectedSeat.seatNo : '-'}</strong>
-            <div className="summary-row">
-              <span>상태</span>
-              <span>{selectedSeat ? STATUS_COPY[selectedSeat.status] || '확인 필요' : '선택 없음'}</span>
-            </div>
-            <div className="summary-row">
-              <span>좌석 번호</span>
-              <span>{selectedSeat ? `${selectedSeat.srt_num}` : '-'}</span>
-            </div>
-            <div className="summary-row">
-              <span>예약 시간</span>
-              <span>{myReservation ? formatTime(myReservation.createdAt) : '-'}</span>
-            </div>
-          </div>
+              <div className="summary-card">
+                <small>현재 선택</small>
+                <strong>{selectedClassroom?.roomName || '-'}</strong>
+                <div className="summary-row">
+                  <span>동</span>
+                  <span>{selectedClassroom?.buildingName || classroomBuildings.find((building) => building.slgNum === selectedBuilding)?.name || '-'}</span>
+                </div>
+                <div className="summary-row">
+                  <span>타임</span>
+                  <span>{selectedSlotLabel}</span>
+                </div>
+                <div className="summary-row">
+                  <span>시간</span>
+                  <span>{selectedClassroom ? `${selectedClassroom.stTime || '-'} - ${selectedClassroom.edTime || '-'}` : '-'}</span>
+                </div>
+                <div className="summary-row">
+                  <span>신청 번호</span>
+                  <span>{classroomRequest?.crt_idx || selectedClassroom?.crtIdx || '-'}</span>
+                </div>
+              </div>
 
-          <div className="chip-row">
-            <span className="chip"><span className="chip-dot" style={{ background: '#15803d' }} /> 예약 가능</span>
-            <span className="chip"><span className="chip-dot" style={{ background: '#d97706' }} /> 예약됨</span>
-            <span className="chip"><span className="chip-dot" style={{ background: '#2563eb' }} /> 내 예약</span>
-          </div>
-
-          <div className="status-box">
-            <h3>기기 등록</h3>
-            <p style={{ marginBottom: 12 }}>
-              도서관 신청은 마지막으로 등록한 기기 한 곳에서만 가능하도록 동작합니다.
-            </p>
-            <button type="button" className="button button-primary" onClick={handleDeviceRegister}>
-              {deviceRegistered ? '기기 재등록' : '기기 등록'}
-            </button>
-          </div>
+              <div className="status-box">
+                <h3>교과교실 상세</h3>
+                <p>담당교사: {classroomInfo?.teachers?.map((teacher) => teacher.crc_mem_name).filter(Boolean).join(', ') || '-'}</p>
+                <p>승인 방식: {selectedClassroom?.approvalName || '-'}</p>
+                <p>담임 승인: {selectedClassroom?.teacherApprovalName || '-'}</p>
+                {classroomRequest || selectedClassroom?.crtIdx ? (
+                  <button
+                    type="button"
+                    className="button button-danger"
+                    onClick={() => handleClassroomCancel()}
+                    disabled={submitting}
+                    style={{ marginTop: 12 }}
+                  >
+                    교과교실 신청 취소
+                  </button>
+                ) : null}
+              </div>
+            </>
+          )}
 
           <div className="status-box">
             <h3>상태 메시지</h3>
-            <p className={messageType === 'error' ? 'toast error' : 'toast'}>{message || '좌석을 선택하거나 검색해 보세요.'}</p>
+            <p className={messageType === 'error' ? 'toast error' : 'toast'}>{message || '항목을 선택해 보세요.'}</p>
           </div>
 
           <div className="status-box">
             <h3>예약 규칙</h3>
             <p>
-              시간 제약 없고 마음대로 신청하셈 자유의 인트라넷 FASTINTRA
+              선택한 메뉴와 타임에 따라 신청 가능한 항목이 분리됩니다.
             </p>
           </div>
         </aside>
 
         <section className="panel map-panel">
-          <div className="map-header">
-            <div>
-              <h2>도서관 좌석 배치</h2>
-              <p style={{ margin: '6px 0 0', color: 'var(--muted)' }}>
-                선택한 타임({studyRoomSlots.find((slot) => slot.value === stIdxFull)?.label})에 따라 좌석 상태가 분리됩니다.
-              </p>
-            </div>
-            <div className="legend">
-              <div className="legend-item"><span className="legend-swatch" style={{ background: '#e7f8ee' }} /> 예약 가능</div>
-              <div className="legend-item"><span className="legend-swatch" style={{ background: '#fde68a' }} /> 예약됨</div>
-              <div className="legend-item"><span className="legend-swatch" style={{ background: '#bfdbfe' }} /> 내 예약</div>
-            </div>
-          </div>
+          {activeService === 'library' ? (
+            <>
+              <div className="map-header">
+                <div>
+                  <h2>도서관 좌석 배치</h2>
+                  <p style={{ margin: '6px 0 0', color: 'var(--muted)' }}>
+                    선택한 타임({selectedSlotLabel})에 따라 좌석 상태가 분리됩니다.
+                  </p>
+                </div>
+                <div className="legend">
+                  <div className="legend-item"><span className="legend-swatch" style={{ background: '#e7f8ee' }} /> 예약 가능</div>
+                  <div className="legend-item"><span className="legend-swatch" style={{ background: '#fde68a' }} /> 예약됨</div>
+                  <div className="legend-item"><span className="legend-swatch" style={{ background: '#bfdbfe' }} /> 내 예약</div>
+                </div>
+              </div>
 
-          {loading ? (
-            <div className="loading-state">좌석 데이터를 불러오는 중입니다...</div>
+              {loading ? (
+                <div className="loading-state">좌석 데이터를 불러오는 중입니다...</div>
+              ) : (
+                <SeatBlockGrid
+                  blocks={groupedSeats}
+                  onSeatSelect={handleReserve}
+                  onCancelSeat={handleCancel}
+                  onSeatRightClick={handleSeatRightClick}
+                  selectedSeatIdx={selectedSeatIdx}
+                  isMaster={isMaster}
+                />
+              )}
+            </>
           ) : (
-            <SeatBlockGrid
-              blocks={groupedSeats}
-              onSeatSelect={handleReserve}
-              onCancelSeat={handleCancel}
-              onSeatRightClick={handleSeatRightClick}
-              selectedSeatIdx={selectedSeatIdx}
-              isMaster={isMaster}
-            />
+            <>
+              <div className="map-header">
+                <div>
+                  <h2>교과교실 신청</h2>
+                  <p style={{ margin: '6px 0 0', color: 'var(--muted)' }}>
+                    {selectedSlotLabel}에 신청 가능한 교과교실을 선택합니다.
+                  </p>
+                </div>
+                <div className="legend">
+                  <div className="legend-item"><span className="legend-swatch" style={{ background: '#e7f8ee' }} /> 신청 가능</div>
+                  <div className="legend-item"><span className="legend-swatch" style={{ background: '#f3f4f6' }} /> 정보</div>
+                </div>
+              </div>
+
+              {classroomLoading ? (
+                <div className="loading-state">교과교실 데이터를 불러오는 중입니다...</div>
+              ) : filteredClassroomRooms.length === 0 ? (
+                <div className="empty-state">
+                  <strong>표시할 교과교실이 없습니다.</strong>
+                  <p>타임이나 동을 바꿔 다시 확인해 주세요.</p>
+                </div>
+              ) : (
+                <div className="classroom-grid">
+                  {filteredClassroomRooms.map((room) => {
+                    const isSelected = selectedClassroom?.crIdx === room.crIdx && selectedClassroom?.stIdx === room.stIdx;
+                    return (
+                      <article key={`${room.crIdx}-${room.stIdx}`} className={`classroom-card ${isSelected ? 'selected' : ''}`}>
+                        <button type="button" className="classroom-card-main" onClick={() => loadClassroomInfo(room)}>
+                          <div>
+                            <strong>{room.roomName || room.roomCode}</strong>
+                            <span>{room.buildingName} · {room.stName || selectedSlotLabel}</span>
+                          </div>
+                          <div className="classroom-time">{room.stTime || '-'} - {room.edTime || '-'}</div>
+                        </button>
+                        <div className="classroom-meta">
+                          <span>{room.approvalName || '승인 정보 없음'}</span>
+                          <span>{room.teacherApprovalName || '-'}</span>
+                        </div>
+                        {room.crtIdx ? (
+                          <button
+                            type="button"
+                            className="button button-danger"
+                            onClick={() => {
+                              setSelectedClassroom(room);
+                              setClassroomRequest({ crt_idx: room.crtIdx, ...room.remote });
+                              handleClassroomCancel({ crt_idx: room.crtIdx, ...room.remote }, room);
+                            }}
+                            disabled={submitting}
+                          >
+                            취소
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="button button-primary"
+                            onClick={() => handleClassroomApply(room)}
+                            disabled={submitting || !room.selectable}
+                          >
+                            신청
+                          </button>
+                        )}
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </>
           )}
         </section>
       </section>
@@ -495,18 +941,48 @@ export default function SeatReservationApp() {
               </button>
             </div>
             <div className="seat-detail-body">
-              <div className="detail-item">
-                <strong>좌석 번호</strong>
-                <span>{selectedSeatDetail.seatNo}</span>
+              <div className="detail-section">
+                <h4>기본 정보</h4>
+                <SeatDetailItem label="좌석 번호" value={selectedSeatDetail.seatNo} />
+                <SeatDetailItem label="상태" value={STATUS_COPY[selectedSeatDetail.status] || selectedSeatDetail.status} />
+                <SeatDetailItem label="예약자" value={selectedSeatDetail.requesterName} />
+                <SeatDetailItem label="선택 타임" value={selectedSeatDetail.stIdxFull || stIdxFull} />
               </div>
-              <div className="detail-item">
-                <strong>예약자</strong>
-                <span>{selectedSeatDetail.requesterName || '-'}</span>
+
+              <div className="detail-section">
+                <h4>예약/요청 값</h4>
+                <SeatDetailItem label="예약 ID (sre_idx)" value={selectedSeatDetail.sre_idx} />
+                <SeatDetailItem label="좌석 ID (srt_idx)" value={selectedSeatDetail.srt_idx} />
+                <SeatDetailItem label="구역 ID (clr_idx)" value={selectedSeatDetail.clr_idx} />
+                <SeatDetailItem label="내 예약 여부 (myYn)" value={selectedSeatDetail.myYn} />
               </div>
-              <div className="detail-item">
-                <strong>상태</strong>
-                <span>{STATUS_COPY[selectedSeatDetail.status] || selectedSeatDetail.status}</span>
+
+              <div className="detail-section">
+                <h4>좌석 원본 정보</h4>
+                <SeatDetailItem label="원본 번호 (srt_num)" value={selectedSeatDetail.srt_num} />
+                <SeatDetailItem label="표시명 (srt_cont)" value={selectedSeatDetail.remote?.srt_cont} />
+                <SeatDetailItem label="타입 (srt_type)" value={selectedSeatDetail.srt_type} />
+                <SeatDetailItem label="사용 여부 (srt_use_yn)" value={selectedSeatDetail.srt_use_yn} />
+                <SeatDetailItem label="좌표 X (srt_x)" value={selectedSeatDetail.srt_x} />
+                <SeatDetailItem label="좌표 Y (srt_y)" value={selectedSeatDetail.srt_y} />
               </div>
+
+              <div className="detail-section">
+                <h4>장소/원격 응답</h4>
+                <SeatDetailItem label="장소 코드" value={selectedSeatDetail.c_place_cd} />
+                <SeatDetailItem label="장소 이름" value={selectedSeatDetail.c_place_cd_name} />
+                <SeatDetailItem label="휴일 여부 (holidayYn)" value={selectedSeatDetail.remote?.holidayYn} />
+                <SeatDetailItem label="원본 예약자 (sre_mem_name)" value={selectedSeatDetail.remote?.sre_mem_name} />
+                <SeatDetailItem label="원본 이름 (memName)" value={selectedSeatDetail.remote?.memName} />
+              </div>
+
+              <div className="detail-section">
+                <h4>UI 상태</h4>
+                <SeatDetailItem label="예약 가능 클릭" value={selectedSeatDetail.clickable} />
+                <SeatDetailItem label="취소 표시" value={selectedSeatDetail.showCancel} />
+                <SeatDetailItem label="예약됨 표시" value={selectedSeatDetail.showReserved} />
+              </div>
+
               {selectedSeatDetail.status === 'mine' && (
                 <button
                   className="button button-primary"

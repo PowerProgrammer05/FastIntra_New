@@ -294,6 +294,33 @@ button {
   gap: 10px;
 }
 
+.mode-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.mode-tab {
+  border: 1px solid rgba(15, 118, 110, 0.16);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--muted);
+  font-weight: 800;
+  padding: 12px;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.mode-tab:hover {
+  transform: translateY(-1px);
+  border-color: rgba(15, 118, 110, 0.36);
+}
+
+.mode-tab.active {
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.94), rgba(15, 159, 139, 0.9));
+  border-color: var(--accent);
+  color: white;
+}
+
 .button {
   border: 0;
   border-radius: 14px;
@@ -360,6 +387,65 @@ button {
 .map-header h2 {
   margin: 0;
   font-size: 1.1rem;
+}
+
+.classroom-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.classroom-card {
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgba(30, 36, 40, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.78);
+  padding: 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.classroom-card.selected {
+  border-color: rgba(15, 118, 110, 0.48);
+  box-shadow: 0 16px 32px rgba(15, 118, 110, 0.12);
+  transform: translateY(-1px);
+}
+
+.classroom-card-main {
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  padding: 0;
+  display: grid;
+  gap: 10px;
+  text-align: left;
+}
+
+.classroom-card-main strong {
+  display: block;
+  font-size: 1.28rem;
+  letter-spacing: -0.03em;
+}
+
+.classroom-card-main span,
+.classroom-meta {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.classroom-time {
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: rgba(15, 118, 110, 0.08);
+  color: var(--accent);
+  font-weight: 800;
+  text-align: center;
+}
+
+.classroom-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .legend {
@@ -768,11 +854,11 @@ button {
 .page-shell.master-window {
   --bg: #1a1a1a;
   --bg-2: #0d0d0d;
-  --panel: rgba(30, 30, 30, 0.85);
-  --panel-strong: rgba(40, 40, 40, 0.95);
+  --panel: rgba(24, 24, 26, 0.9);
+  --panel-strong: rgba(32, 32, 34, 0.96);
   --ink: #ffffff;
-  --muted: #b0b0b0;
-  --line: rgba(255, 255, 255, 0.1);
+  --muted: #f2f2f2;
+  --line: rgba(255, 255, 255, 0.18);
   --accent: #ff0000;
   --accent-2: #ff3333;
   --danger: #ff6666;
@@ -787,8 +873,9 @@ button {
 }
 
 .page-shell.master-window .hero {
-  background: linear-gradient(135deg, rgba(40, 40, 40, 0.92), rgba(30, 30, 30, 0.86));
+  background: linear-gradient(135deg, rgba(36, 20, 20, 0.96), rgba(18, 18, 20, 0.92));
   border-color: rgba(255, 0, 0, 0.2);
+  color: #ffffff;
 }
 
 .page-shell.master-window .hero::after {
@@ -803,42 +890,42 @@ button {
 .page-shell.master-window .panel,
 .page-shell.master-window .side-panel,
 .page-shell.master-window .map-panel {
-  background: rgba(18, 18, 20, 0.9);
-  border-color: rgba(255, 255, 255, 0.06);
-  color: #e6eef0;
+  background: rgba(18, 18, 20, 0.92);
+  border-color: rgba(255, 0, 0, 0.18);
+  color: #ffffff;
 }
 
 .page-shell.master-window .summary-card {
-  background: linear-gradient(135deg, rgba(28,28,30,0.96), rgba(20,20,22,0.96));
-  color: #fff;
-  border: 1px solid rgba(255,255,255,0.06);
+  background: linear-gradient(135deg, rgba(90, 0, 0, 0.92), rgba(28, 18, 18, 0.96));
+  color: #ffffff;
+  border: 1px solid rgba(255, 80, 80, 0.28);
 }
 
 .page-shell.master-window .slot-item,
 .page-shell.master-window .slot-list .slot-item {
-  background: rgba(255,255,255,0.03);
-  border-color: rgba(255,255,255,0.06);
-  color: #e6eef0;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
 }
 
 .page-shell.master-window .slot-item.selected {
-  background: rgba(255,255,255,0.06);
-  box-shadow: 0 0 0 4px rgba(255,255,255,0.03);
+  background: rgba(255, 0, 0, 0.24);
+  box-shadow: 0 0 0 4px rgba(255, 0, 0, 0.12);
 }
 
 .page-shell.master-window .toast,
 .page-shell.master-window .chip,
 .page-shell.master-window .status-box,
 .page-shell.master-window .search-row .inline-actions input {
-  background: rgba(255,255,255,0.03);
-  border-color: rgba(255,255,255,0.06);
-  color: #e6eef0;
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
 }
 
 .page-shell.master-window .button-muted {
-  background: rgba(255,255,255,0.03);
-  color: #e6eef0;
-  border-color: rgba(255,255,255,0.06);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.16);
 }
 
 .page-shell.master-window .seat-cell {
@@ -865,7 +952,7 @@ button {
 .page-shell.master-window .hero p,
 .page-shell.master-window .metric strong,
 .page-shell.master-window .metric span {
-  color: #e6eef0;
+  color: #ffffff;
 }
 
 .page-shell.master-window .seat-action,
@@ -876,7 +963,7 @@ button {
 }
 
 .page-shell.master-window .seat-requester {
-  color: #cfd8df;
+  color: #ffffff;
 }
 
 .page-shell.master-window .eyebrow::before {
@@ -905,7 +992,7 @@ button {
 }
 
 .page-shell.master-window .status-box {
-  background: linear-gradient(135deg, rgba(40, 40, 40, 0.8), rgba(30, 30, 30, 0.7));
+  background: linear-gradient(135deg, rgba(44, 24, 24, 0.9), rgba(24, 24, 26, 0.86));
   border-color: rgba(255, 0, 0, 0.2);
 }
 
@@ -945,7 +1032,7 @@ button {
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
-  max-width: 400px;
+  max-width: 560px;
   width: 90%;
   max-height: 80vh;
   overflow: auto;
@@ -1001,25 +1088,42 @@ button {
   padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
+}
+
+.detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.detail-section h4 {
+  margin: 0 0 6px;
+  color: var(--ink);
+  font-size: 0.95rem;
 }
 
 .detail-item {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 10px 0;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 8px 0;
   border-bottom: 1px solid var(--line);
 }
 
 .detail-item strong {
   color: var(--muted);
   font-weight: 600;
+  flex: 0 0 190px;
 }
 
 .detail-item span {
   color: var(--ink);
   font-weight: 500;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
 }
 
 .page-shell.master-window .seat-detail-modal {
@@ -1042,4 +1146,45 @@ button {
 
 .page-shell.master-window .detail-item {
   border-bottom-color: rgba(255, 0, 0, 0.1);
+}
+
+.page-shell.master-window .detail-section h4,
+.page-shell.master-window .detail-item strong,
+.page-shell.master-window .detail-item span,
+.page-shell.master-window .close-button,
+.page-shell.master-window .classroom-card-main,
+.page-shell.master-window .classroom-card-main span,
+.page-shell.master-window .classroom-meta,
+.page-shell.master-window .floor-tab,
+.page-shell.master-window .mode-tab,
+.page-shell.master-window .section-title,
+.page-shell.master-window .status-box p,
+.page-shell.master-window .summary-row {
+  color: #ffffff;
+}
+
+.page-shell.master-window .classroom-card {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.page-shell.master-window .classroom-card.selected {
+  border-color: rgba(255, 80, 80, 0.55);
+  box-shadow: 0 16px 32px rgba(255, 0, 0, 0.14);
+}
+
+.page-shell.master-window .classroom-time {
+  background: rgba(255, 0, 0, 0.18);
+  color: #ffffff;
+}
+
+.page-shell.master-window .floor-tab {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.page-shell.master-window .floor-tab.active,
+.page-shell.master-window .mode-tab.active {
+  background: linear-gradient(135deg, #ff0000, #9f0000);
+  color: #ffffff;
 }
