@@ -12,16 +12,10 @@ const CLASSROOM_REFERER = 'https://hh.hana.hs.kr/main/classroom/apply.do';
 const ROOM_PAGE_SIZE = 50;
 const MAX_ROOM_PAGES = 20;
 
-function getSlotIndex(stIdxFull) {
-  const parts = String(stIdxFull || '').split('_');
-  return Number(parts[parts.length - 1] || 0);
-}
-
 function getRoomKey(item) {
   return [
     item.cr_idx || '',
     item.slp_idx || '',
-    item.st_idx || '',
     item.slp_code || '',
     item.slp_nm || ''
   ].join(':');
@@ -38,7 +32,6 @@ export async function GET(request) {
   const url = new URL(request.url);
   const slgNum = String(url.searchParams.get('slgNum') || '').trim();
   const stIdxFull = String(url.searchParams.get('stIdxFull') || '').trim();
-  const selectedStIdx = getSlotIndex(stIdxFull);
 
   if (!slgNum) {
     return NextResponse.json({ result: 'fail', resMsg: '동 정보를 선택해 주세요.' }, { status: 400 });
@@ -62,7 +55,7 @@ export async function GET(request) {
         cp,
         pageSize: ROOM_PAGE_SIZE,
         listType: 'list',
-        stIdxFull: '',
+        stIdxFull,
         slgNum,
         schClassYn: 'Y'
       })
@@ -101,7 +94,6 @@ export async function GET(request) {
   }
 
   const rooms = rawRooms
-    .filter((item) => !selectedStIdx || Number(item.st_idx || 0) === selectedStIdx)
     .map((item) => ({
       crIdx: Number(item.cr_idx || 0),
       slpIdx: Number(item.slp_idx || 0),
@@ -134,7 +126,6 @@ export async function GET(request) {
     list: rawRooms,
     slgNum,
     stIdxFull,
-    selectedStIdx,
     totalRawCount: rawRooms.length,
     resMsg: lastResponseData.resMsg || ''
   });
