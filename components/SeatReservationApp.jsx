@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import SeatBlockGrid from './SeatBlockGrid';
 import { readJsonResponse } from '../lib/api-client';
@@ -40,6 +40,7 @@ function SeatDetailItem({ label, value }) {
 
 export default function SeatReservationApp() {
   const router = useRouter();
+  const autoReserveTimerRef = useRef(null);
   const studyRoomSlots = useMemo(() => getStudyRoomSlots(), []);
   const [activeService, setActiveService] = useState('library');
   const [memId, setMemId] = useState('');
@@ -57,6 +58,9 @@ export default function SeatReservationApp() {
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('info');
   const [selectedSeatDetail, setSelectedSeatDetail] = useState(null);
+  const [autoReserveSeatNo, setAutoReserveSeatNo] = useState('');
+  const [autoReserveAt, setAutoReserveAt] = useState('');
+  const [autoReserveStatus, setAutoReserveStatus] = useState('');
   const [classroomBuildings, setClassroomBuildings] = useState([]);
   const [selectedBuilding, setSelectedBuilding] = useState('');
   const [classroomRooms, setClassroomRooms] = useState([]);
@@ -355,6 +359,12 @@ export default function SeatReservationApp() {
     bootstrap();
   }, []);
 
+  useEffect(() => () => {
+    if (autoReserveTimerRef.current) {
+      clearTimeout(autoReserveTimerRef.current);
+    }
+  }, []);
+
   useEffect(() => {
     if (!isAuthenticated) return;
     if (activeService === 'library') {
@@ -375,11 +385,8 @@ export default function SeatReservationApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedBuilding]);
 
-  async function handleReserve(seat) {
-    setSubmitting(true);
-
-    try {
-      console.log('[Reserve] Attempting reservation for seat:', seat, 'stIdxFull:', stIdxFull);
+  async function reserveSeatForSlot(seat, slotValue) {
+    console.log('[Reserve] Attempting reservation for seat:', seat, 'stIdxFull:', slotValue);
       const response = await fetch('/api/reservations', {
         method: 'POST',
         headers: {
@@ -390,9 +397,9 @@ export default function SeatReservationApp() {
           seat: {
             clr_idx: seat.clr_idx,
             srt_idx: seat.srt_idx,
-            stIdxFull
+          stIdxFull: slotValue
           },
-          stIdxFull,
+        stIdxFull: slotValue,
         })
       });
 
@@ -403,6 +410,14 @@ export default function SeatReservationApp() {
         throw new Error(data.resMsg || data.hMsg || data.retMsg || '예약 중 오류가 발생했습니다.');
       }
 
+    return data;
+  }
+
+  async function handleReserve(seat) {
+    setSubmitting(true);
+
+    try {
+      await reserveSeatForSlot(seat, stIdxFull);
       setMessage(`${seat.seatNo}번 좌석 예약이 완료되었습니다.`);
       setMessageType('success');
       setSelectedSeatIdx(seat.srt_idx);
@@ -413,6 +428,111 @@ export default function SeatReservationApp() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function findSeatByQuery(seatList, query) {
+    if (!query) return null;
+
+    return seatList.find((seat) => (
+      String(seat.seatNo) === query
+      || String(seat.srt_num) === query
+      || String(seat.srt_idx) === query
+    )) || null;
+  }
+
+  async function fetchSeatsForSlot(slotValue) {
+    const response = await fetch(`/api/seats?stIdxFull=${encodeURIComponent(slotValue)}`, { credentials: 'same-origin' });
+    const data = await readJsonResponse(response);
+
+    if (!response.ok || data.result !== 'success') {
+      if (response.status === 401) {
+        router.replace('/login');
+        return [];
+      }
+
+      throw new Error(data.resMsg || data.hMsg || '좌석 정보를 가져오지 못했습니다.');
+    }
+
+    return data.seats || [];
+  }
+
+  async function runAutoReserveAllSlots(seatQuery) {
+    setSubmitting(true);
+
+    const results = [];
+    try {
+      for (const slot of studyRoomSlots) {
+        const slotSeats = await fetchSeatsForSlot(slot.value);
+        const targetSeat = findSeatByQuery(slotSeats, seatQuery);
+
+        if (!targetSeat) {
+          results.push(`${slot.label}: 좌석 없음`);
+          continue;
+        }
+
+        if (targetSeat.status !== 'available') {
+          results.push(`${slot.label}: 예약 불가`);
+          continue;
+        }
+
+        try {
+          await reserveSeatForSlot(targetSeat, slot.value);
+          results.push(`${slot.label}: 성공`);
+        } catch (error) {
+          results.push(`${slot.label}: ${error.message || '실패'}`);
+        }
+      }
+
+      const successCount = results.filter((result) => result.endsWith('성공')).length;
+      setAutoReserveStatus(results.join(' / '));
+      setMessage(`자동 예약 완료: ${successCount}/${studyRoomSlots.length}개 타임 성공`);
+      setMessageType(successCount > 0 ? 'success' : 'error');
+      await loadSeats();
+    } catch (error) {
+      setAutoReserveStatus(error.message || '자동 예약 중 오류가 발생했습니다.');
+      setMessage(error.message || '자동 예약 중 오류가 발생했습니다.');
+      setMessageType('error');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function cancelAutoReserve() {
+    if (autoReserveTimerRef.current) {
+      clearTimeout(autoReserveTimerRef.current);
+      autoReserveTimerRef.current = null;
+    }
+
+    setAutoReserveStatus('자동 예약 대기를 취소했습니다.');
+  }
+
+  function scheduleAutoReserve() {
+    if (!isMaster) {
+      setAutoReserveStatus('마스터만 자동 예약을 설정할 수 있습니다.');
+      return;
+    }
+
+    const seatQuery = autoReserveSeatNo.trim();
+    if (!seatQuery) {
+      setAutoReserveStatus('좌석 번호를 입력해 주세요.');
+      return;
+    }
+
+    const targetTime = new Date(autoReserveAt);
+    const delay = targetTime.getTime() - Date.now();
+    if (!autoReserveAt || Number.isNaN(targetTime.getTime()) || delay <= 0) {
+      setAutoReserveStatus('현재보다 이후의 예약 시각을 선택해 주세요.');
+      return;
+    }
+
+    cancelAutoReserve();
+    autoReserveTimerRef.current = window.setTimeout(() => {
+      autoReserveTimerRef.current = null;
+      setAutoReserveStatus(`${seatQuery}번 좌석 자동 예약 요청을 모든 타임에 보냅니다.`);
+      runAutoReserveAllSlots(seatQuery);
+    }, delay);
+
+    setAutoReserveStatus(`${seatQuery}번 좌석을 ${formatTime(targetTime.toISOString())}에 모든 타임 예약 대기 중입니다.`);
   }
 
   async function handleCancel(seat) {
@@ -727,6 +847,39 @@ export default function SeatReservationApp() {
                 <span className="chip"><span className="chip-dot" style={{ background: '#d97706' }} /> 예약됨</span>
                 <span className="chip"><span className="chip-dot" style={{ background: '#2563eb' }} /> 내 예약</span>
               </div>
+
+              {isMaster ? (
+                <div className="status-box">
+                  <h3>마스터 자동 예약</h3>
+                  <div className="field" style={{ marginTop: 10 }}>
+                    <label htmlFor="autoReserveSeatNo">좌석 번호</label>
+                    <input
+                      id="autoReserveSeatNo"
+                      value={autoReserveSeatNo}
+                      onChange={(event) => setAutoReserveSeatNo(event.target.value)}
+                      placeholder="예: 2-81"
+                    />
+                  </div>
+                  <div className="field" style={{ marginTop: 10 }}>
+                    <label htmlFor="autoReserveAt">예약 요청 시각</label>
+                    <input
+                      id="autoReserveAt"
+                      type="datetime-local"
+                      value={autoReserveAt}
+                      onChange={(event) => setAutoReserveAt(event.target.value)}
+                    />
+                  </div>
+                  <div className="inline-actions" style={{ marginTop: 12 }}>
+                    <button type="button" className="button button-primary" onClick={scheduleAutoReserve}>
+                      자동 예약 설정
+                    </button>
+                    <button type="button" className="button button-muted" onClick={cancelAutoReserve}>
+                      취소
+                    </button>
+                  </div>
+                  <p style={{ marginTop: 10 }}>{autoReserveStatus || '탭이 열려 있는 동안 지정 시각에 가능한 모든 타임으로 예약 요청을 보냅니다.'}</p>
+                </div>
+              ) : null}
 
               <div className="status-box">
                 <h3>기기 등록</h3>

@@ -288,6 +288,7 @@ button {
   gap: 10px;
 }
 
+.inline-actions,
 .search-row .inline-actions {
   display: grid;
   grid-template-columns: 1fr auto;
