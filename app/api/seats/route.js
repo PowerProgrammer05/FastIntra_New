@@ -28,6 +28,37 @@ function resolveSeatStatus(item) {
   return { status: 'empty', clickable: false, showCancel: false, showReserved: false };
 }
 
+function getRemoteName(item) {
+  return String(item?.sre_mem_name || item?.memName || item?.requesterName || '').trim();
+}
+
+function getRemoteStudentNumber(item) {
+  return String(item?.sre_std_num || '').trim();
+}
+
+function buildStudentNameMap(list) {
+  const studentNames = new Map();
+
+  list.forEach((item) => {
+    const studentNumber = getRemoteStudentNumber(item);
+    const name = getRemoteName(item);
+
+    if (studentNumber && name) {
+      studentNames.set(studentNumber, name);
+    }
+  });
+
+  return studentNames;
+}
+
+function formatRequester(studentNumber, studentName) {
+  if (studentNumber && studentName) {
+    return `${studentNumber} - ${studentName}`;
+  }
+
+  return studentNumber || studentName || '';
+}
+
 export async function GET(request) {
   const sessionId = getSessionIdFromRequest(request);
   const session = await getSessionById(sessionId);
@@ -38,6 +69,7 @@ export async function GET(request) {
 
   const url = new URL(request.url);
   const stIdxFull = String(url.searchParams.get('stIdxFull') || findStudyRoomSlot().value).trim();
+  const requestBody = new URLSearchParams({ stIdxFull, subListYn: 'N', pageSize: '200' }).toString();
   const { response, json } = await fetchRemoteJson('/main/library/study-room-req-list.json', {
     method: 'POST',
     headers: buildRemoteHeaders({
@@ -46,10 +78,22 @@ export async function GET(request) {
       origin: 'https://hh.hana.hs.kr',
       contentType: 'application/x-www-form-urlencoded; charset=UTF-8'
     }),
-    body: new URLSearchParams({ stIdxFull, subListYn: 'N', pageSize: '200' }).toString()
+    body: requestBody
   });
 
-  const remoteCookieHeader = mergeCookieHeader(session.remoteCookieHeader, getSetCookieLines(response.headers));
+  let remoteCookieHeader = mergeCookieHeader(session.remoteCookieHeader, getSetCookieLines(response.headers));
+  const { response: studyRoomResponse, json: studyRoomJson } = await fetchRemoteJson('/main/studyroom/study-room-req-list.json', {
+    method: 'POST',
+    headers: buildRemoteHeaders({
+      cookieHeader: remoteCookieHeader,
+      referer: 'https://hh.hana.hs.kr/main/studyroom/study-apply.do',
+      origin: 'https://hh.hana.hs.kr',
+      contentType: 'application/x-www-form-urlencoded; charset=UTF-8'
+    }),
+    body: requestBody
+  });
+
+  remoteCookieHeader = mergeCookieHeader(remoteCookieHeader, getSetCookieLines(studyRoomResponse.headers));
   if (remoteCookieHeader !== session.remoteCookieHeader) {
     await updateSession(sessionId, { remoteCookieHeader });
   }
@@ -64,9 +108,13 @@ export async function GET(request) {
   }
 
   const remoteList = Array.isArray(responseData.list) ? responseData.list : [];
+  const studyRoomList = studyRoomJson?.result === 'success' && Array.isArray(studyRoomJson.list) ? studyRoomJson.list : [];
+  const studentNames = buildStudentNameMap(studyRoomList);
   const seats = remoteList.map((item) => {
     const seatStatus = resolveSeatStatus(item);
     const displayNo = item.srt_cont && item.srt_cont.trim() ? item.srt_cont : String(item.srt_num || item.srt_idx);
+    const studentNumber = getRemoteStudentNumber(item);
+    const requesterName = formatRequester(studentNumber, getRemoteName(item) || studentNames.get(studentNumber));
     
     // Infer clr_idx from srt_x coordinate if not provided
     let clrIdx = item.clr_idx;
@@ -105,11 +153,12 @@ export async function GET(request) {
       clr_idx: clrIdx,
       c_place_cd: item.c_place_cd,
       c_place_cd_name: item.c_place_cd_name,
-      requesterName: item.sre_mem_name || item.memName || item.requesterName || '',
+      requesterName,
       stIdxFull,
       remote: {
         srt_cont: item.srt_cont,
         holidayYn: item.holidayYn,
+        sre_std_num: item.sre_std_num,
         sre_mem_name: item.sre_mem_name,
         memName: item.memName,
         requesterName: item.requesterName

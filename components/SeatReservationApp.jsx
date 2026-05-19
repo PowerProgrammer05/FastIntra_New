@@ -1125,7 +1125,7 @@ export default function SeatReservationApp() {
                 <SeatDetailItem label="장소 코드" value={selectedSeatDetail.c_place_cd} />
                 <SeatDetailItem label="장소 이름" value={selectedSeatDetail.c_place_cd_name} />
                 <SeatDetailItem label="휴일 여부 (holidayYn)" value={selectedSeatDetail.remote?.holidayYn} />
-                <SeatDetailItem label="원본 예약자 (sre_mem_name)" value={selectedSeatDetail.remote?.sre_mem_name} />
+                <SeatDetailItem label="원본 학번 (sre_std_num)" value={selectedSeatDetail.remote?.sre_std_num} />
                 <SeatDetailItem label="원본 이름 (memName)" value={selectedSeatDetail.remote?.memName} />
               </div>
 
